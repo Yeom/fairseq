@@ -255,6 +255,11 @@ class SequenceGenerator(nn.Module):
 
         reorder_state: Optional[Tensor] = None
         batch_idxs: Optional[Tensor] = None
+
+        #For saving decoding path.
+        decoding_path = tokens.clone()
+        decoding_backptr = torch.empty(tokens.size()).long()
+
         for step in range(max_len + 1):  # one extra step for EOS marker
             # reorder decoder internal states based on the prev choice of beams
             # print(f'step: {step}')
@@ -451,6 +456,11 @@ class SequenceGenerator(nn.Module):
             # reorder incremental state in decoder
             reorder_state = active_bbsz_idx
 
+            # Decoding path save.
+            decoding_path.view(bsz, beam_size, -1)[:, :, step+1] = torch.gather(
+                cand_indices, dim=1, index=active_hypos)
+            decoding_backptr.view(bsz, beam_size, -1)[:, :, step+1] = torch.gather(
+                cand_bbsz_idx, dim=1, index=active_hypos)
         # sort by score descending
         for sent in range(len(finalized)):
             # make into beam container
@@ -463,7 +473,7 @@ class SequenceGenerator(nn.Module):
                 List[Dict[str, Tensor]], [x.elem for x in BCList]
             )
 
-        return finalized
+        return finalized, decoding_path[:, 1:step+1], decoding_backptr[:, 1:step+1]
 
     def _prefix_tokens(
         self, step: int, lprobs, scores, tokens, prefix_tokens, beam_size: int
