@@ -61,6 +61,7 @@ class SequenceGenerator(nn.Module):
             self.model = models
         else:
             self.model = EnsembleModel(models)
+        self.tgt_dict = tgt_dict
         self.pad = tgt_dict.pad()
         self.unk = tgt_dict.unk()
         self.eos = tgt_dict.eos() if eos is None else eos
@@ -446,6 +447,13 @@ class SequenceGenerator(nn.Module):
             scores.view(bsz, beam_size, -1)[:, :, step] = torch.gather(
                 cand_scores, dim=1, index=active_hypos
             )
+            # print(tokens[:, :step+2])
+            # print(scores[:, :step+2])
+            # for token in tokens[:, :step+2]:
+            #     l = []
+            #     for tok in token:
+            #         l.append(self.tgt_dict[tok])
+            #     print(l)
 
             # copy attention for active hypotheses
             if attn is not None:
@@ -456,7 +464,7 @@ class SequenceGenerator(nn.Module):
             # reorder incremental state in decoder
             reorder_state = active_bbsz_idx
 
-            # Decoding path save.
+            # Decoding path save. generate.py에서 문제 발생. Batch 문제일듯
             decoding_path.view(bsz, beam_size, -1)[:, :, step+1] = torch.gather(
                 cand_indices, dim=1, index=active_hypos)
             decoding_backptr.view(bsz, beam_size, -1)[:, :, step+1] = torch.gather(
@@ -472,8 +480,10 @@ class SequenceGenerator(nn.Module):
             finalized[sent] = torch.jit.annotate(
                 List[Dict[str, Tensor]], [x.elem for x in BCList]
             )
-
+        #generate.py에서 문제 발생.
+        # print([(l.elem, l.score) for l in BCList])
         return finalized, decoding_path[:, 1:step+1], decoding_backptr[:, 1:step+1]
+        # return finalized
 
     def _prefix_tokens(
         self, step: int, lprobs, scores, tokens, prefix_tokens, beam_size: int
