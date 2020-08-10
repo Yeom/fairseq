@@ -247,6 +247,7 @@ class FairseqTask(object):
         from fairseq.sequence_generator import (
             SequenceGenerator,
             SequenceGeneratorWithAlignment,
+            SequenceGeneratorForDecodingPath
         )
 
         # Choose search strategy. Defaults to Beam Search.
@@ -302,6 +303,8 @@ class FairseqTask(object):
         if seq_gen_cls is None:
             if getattr(args, "print_alignment", False):
                 seq_gen_cls = SequenceGeneratorWithAlignment
+            elif getattr(args, "print_decoding_path", False):
+                seq_gen_cls = SequenceGeneratorForDecodingPath
             else:
                 seq_gen_cls = SequenceGenerator
         extra_gen_cls_kwargs = extra_gen_cls_kwargs or {}
